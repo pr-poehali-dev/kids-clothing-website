@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,93 +7,37 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  oldPrice?: number;
-  image: string;
-  category: string;
-  sizes: string[];
-  isNew?: boolean;
-  gender: string;
-  ageGroup: string;
-}
-
-const products: Product[] = [
-  {
-    id: 1,
-    name: 'Летний комплект для мальчика',
-    price: 2490,
-    oldPrice: 3560,
-    image: 'https://cdn.poehali.dev/projects/81f0d978-6600-4494-9ff6-960c7f4f73bd/files/626b9215-334f-4c88-86a2-705c9b06836d.jpg',
-    category: 'Комплекты',
-    sizes: ['92', '98', '104', '110'],
-    isNew: true,
-    gender: 'boy',
-    ageGroup: '0-3'
-  },
-  {
-    id: 2,
-    name: 'Платье для девочки с рюшами',
-    price: 3290,
-    image: 'https://cdn.poehali.dev/projects/81f0d978-6600-4494-9ff6-960c7f4f73bd/files/c9ff5197-c89a-4430-9a1d-99f9630fd7c4.jpg',
-    category: 'Платья',
-    sizes: ['86', '92', '98', '104'],
-    isNew: true,
-    gender: 'girl',
-    ageGroup: '0-3'
-  },
-  {
-    id: 3,
-    name: 'Футболка с принтом космос',
-    price: 890,
-    image: 'https://cdn.poehali.dev/projects/81f0d978-6600-4494-9ff6-960c7f4f73bd/files/626b9215-334f-4c88-86a2-705c9b06836d.jpg',
-    category: 'Футболки',
-    sizes: ['110', '116', '122', '128', '134'],
-    gender: 'boy',
-    ageGroup: '3-7'
-  },
-  {
-    id: 4,
-    name: 'Джинсовая куртка',
-    price: 4200,
-    oldPrice: 5600,
-    image: 'https://cdn.poehali.dev/projects/81f0d978-6600-4494-9ff6-960c7f4f73bd/files/2727d0b5-1f68-4257-8c44-a50484a42959.jpg',
-    category: 'Верхняя одежда',
-    sizes: ['128', '134', '140', '146'],
-    gender: 'unisex',
-    ageGroup: '7-12'
-  },
-  {
-    id: 5,
-    name: 'Спортивный костюм',
-    price: 2890,
-    image: 'https://cdn.poehali.dev/projects/81f0d978-6600-4494-9ff6-960c7f4f73bd/files/626b9215-334f-4c88-86a2-705c9b06836d.jpg',
-    category: 'Костюмы',
-    sizes: ['110', '116', '122', '128'],
-    gender: 'unisex',
-    ageGroup: '3-7'
-  },
-  {
-    id: 6,
-    name: 'Теплая толстовка с капюшоном',
-    price: 1990,
-    image: 'https://cdn.poehali.dev/projects/81f0d978-6600-4494-9ff6-960c7f4f73bd/files/c9ff5197-c89a-4430-9a1d-99f9630fd7c4.jpg',
-    category: 'Толстовки',
-    sizes: ['92', '98', '104', '110', '116'],
-    isNew: true,
-    gender: 'girl',
-    ageGroup: '0-3'
-  }
-];
+import { api, Product } from '@/lib/api';
 
 const Catalog = () => {
+  const [products, setProducts] = useState<Product[]>([]);
   const [priceRange, setPriceRange] = useState([0, 6000]);
   const [selectedGender, setSelectedGender] = useState<string[]>([]);
   const [selectedAge, setSelectedAge] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('popular');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProducts();
+  }, [selectedGender, selectedAge, priceRange]);
+
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      const filters = {
+        gender: selectedGender.join(','),
+        ageGroup: selectedAge.join(','),
+        minPrice: priceRange[0],
+        maxPrice: priceRange[1]
+      };
+      const data = await api.getProducts(filters);
+      setProducts(data);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGenderChange = (gender: string) => {
     setSelectedGender(prev =>
@@ -106,14 +50,6 @@ const Catalog = () => {
       prev.includes(age) ? prev.filter(a => a !== age) : [...prev, age]
     );
   };
-
-  const filteredProducts = products.filter(product => {
-    const priceMatch = product.price >= priceRange[0] && product.price <= priceRange[1];
-    const genderMatch = selectedGender.length === 0 || selectedGender.includes(product.gender) || product.gender === 'unisex';
-    const ageMatch = selectedAge.length === 0 || selectedAge.includes(product.ageGroup);
-    
-    return priceMatch && genderMatch && ageMatch;
-  });
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -219,7 +155,7 @@ const Catalog = () => {
               </SheetContent>
             </Sheet>
             <span className="text-sm text-muted-foreground">
-              Найдено: {filteredProducts.length} товаров
+              Найдено: {products.length} товаров
             </span>
           </div>
 
@@ -245,18 +181,27 @@ const Catalog = () => {
           </aside>
 
           <div className="lg:col-span-3">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} {...product} />
-              ))}
-            </div>
-
-            {filteredProducts.length === 0 && (
+            {loading ? (
               <div className="text-center py-12">
-                <Icon name="SearchX" size={48} className="mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg text-muted-foreground">Товары не найдены</p>
-                <p className="text-sm text-muted-foreground mt-2">Попробуйте изменить фильтры</p>
+                <Icon name="Loader2" size={48} className="mx-auto text-primary animate-spin mb-4" />
+                <p className="text-lg text-muted-foreground">Загрузка товаров...</p>
               </div>
+            ) : (
+              <>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {products.map(product => (
+                    <ProductCard key={product.id} {...product} />
+                  ))}
+                </div>
+
+                {products.length === 0 && (
+                  <div className="text-center py-12">
+                    <Icon name="SearchX" size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-lg text-muted-foreground">Товары не найдены</p>
+                    <p className="text-sm text-muted-foreground mt-2">Попробуйте изменить фильтры</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

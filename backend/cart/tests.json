@@ -1,0 +1,13 @@
+{
+  "tests": [
+    {
+      "name": "Get empty cart",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-Session-Id": "test-session"
+      },
+      "expectedStatus": 200
+    }
+  ]
+}

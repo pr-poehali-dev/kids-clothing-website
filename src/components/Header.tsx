@@ -1,10 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import Icon from '@/components/ui/icon';
+import { api } from '@/lib/api';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    loadCartCount();
+    const interval = setInterval(loadCartCount, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadCartCount = async () => {
+    try {
+      const cart = await api.getCart();
+      setCartCount(cart.count);
+    } catch (error) {
+      console.error('Failed to load cart:', error);
+    }
+  };
 
   const navLinks = [
     { name: 'Главная', href: '#home' },
@@ -40,11 +57,13 @@ const Header = () => {
             <Button variant="ghost" size="icon" className="hidden md:flex">
               <Icon name="Search" size={20} />
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="relative">
               <Icon name="ShoppingCart" size={20} />
-              <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
-                0
-              </span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center font-bold">
+                  {cartCount}
+                </span>
+              )}
             </Button>
 
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
